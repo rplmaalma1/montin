@@ -1,3 +1,4 @@
+import modules.mqtt
 from json.decoder import JSONDecodeError
 from dotenv import load_dotenv
 load_dotenv()
@@ -17,6 +18,8 @@ mqtt_port = int(os.getenv("MQTT_PORT"))
 mqtt_user = os.getenv("MQTT_USER")
 mqtt_password = os.getenv("MQTT_PASSWORD")
 mqtt_base_topic = os.getenv("MQTT_BASE_TOPIC")
+
+print("Connecting to broker "+mqtt_broker+"...")
 
 mqtt_client = mqtt.Client(
     mqtt.CallbackAPIVersion.VERSION2, client_id="MONTIN-ADMIN")
