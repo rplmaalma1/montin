@@ -1,28 +1,24 @@
-import modules.mqtt
 from json.decoder import JSONDecodeError
 from dotenv import load_dotenv
 load_dotenv()
 
+from modules.mqtt_env import mqtt_broker, mqtt_user, mqtt_password, mqtt_base_topic, mqtt_port
 import paho.mqtt.client as mqtt
 import os, numpy as np
 import json
-from modules.obj_classes import *
+from modules.db_models import *
+from flask_cors import CORS
 from flask import Flask, jsonify, request
+from pymongo.errors import PyMongoError
 
 app = Flask(__name__)
+CORS(app)
 
 machines: np.ndarray[Machine] = np.array([])
 
-mqtt_broker = os.getenv("MQTT_BROKER")
-mqtt_port = int(os.getenv("MQTT_PORT"))
-mqtt_user = os.getenv("MQTT_USER")
-mqtt_password = os.getenv("MQTT_PASSWORD")
-mqtt_base_topic = os.getenv("MQTT_BASE_TOPIC")
-
 print("Connecting to broker "+mqtt_broker+"...")
 
-mqtt_client = mqtt.Client(
-    mqtt.CallbackAPIVersion.VERSION2, client_id="MONTIN-ADMIN")
+mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id="MONTIN-ADMIN")
 mqtt_client.username_pw_set(mqtt_user, mqtt_password)
 
 @mqtt_client.connect_callback()
@@ -68,7 +64,7 @@ def mqtt_onmessage(client: mqtt.Client, userdata, message):
         except JSONDecodeError as e:
             print(f"Error while parsing message: {e}")
 
-mqtt_client.connect(mqtt_broker, mqtt_port)
+# mqtt_client.connect(mqtt_broker, mqtt_port)
 
 @app.route('/api/machines', methods=['GET'])
 def get_machines():
@@ -95,12 +91,35 @@ def patch_machine(id):
                             data=[machine.get_dict() for machine in machines])
     return response(code=404, message="Tidak dapat menemukan ID mesin")
 
+@app.route("/patient", methods=["POST"])
+def add_patient():
+    data = request.json
+    try:
+        patient = Patient.from_json(json.dumps(data))
+        patient.save()
+        json_data = json.loads(patient.to_json())
+        return response(message="Berhasil menambahkan pasien!", data=json_data)
+    except Exception as e:
+        print(e)
+        return response(400, message="Gagal menambahkan pasien!")
+
+@app.route("/patient", methods=["GET"])
+def get_patient():
+    try:
+        patients: Patient = Patient.objects()
+        json_data = json.loads(patients.to_json())
+        return response(message="Berhasil mengambil pasien!", data=json_data)
+    except Exception as e:
+        print(e)
+        return response(400, message="Gagal mengambil pasien!")
+
 def response(code = 200, message = "Respon berhasil", data=None):
     return jsonify({
         "message": message,
-        "data": data
-    }), code
+        "data": data,
+        "code": code
+    })
 
 if __name__ == '__main__':
-    mqtt_client.loop_start()
-    app.run(host='0.0.0.0')
+    # mqtt_client.loop_start()
+    app.run(host='0.0.0.0', debug=True)
