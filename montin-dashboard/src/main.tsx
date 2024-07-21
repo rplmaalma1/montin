@@ -23,7 +23,7 @@ export default theme
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ChakraProvider theme={theme}>
+    <ChakraProvider theme={theme} toastOptions={{defaultOptions:{isClosable: true, position: "top"}}}>
       <App/>
     </ChakraProvider>
   </React.StrictMode>,
