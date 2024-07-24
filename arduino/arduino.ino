@@ -1,5 +1,4 @@
 #include <Wire.h>
-#include "MAX30100_PulseOximeter.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <PubSubClient.h>
@@ -10,13 +9,7 @@ const char* password = "brainissue";
 
 const char* mqttServer = "192.168.1.11";
 
-#define UNIQUE_ID_PREFIX "MONTIN-"
-
-#define POX_DETECTING_PERIOD_MS 2000
-
-PulseOximeter pox;
-bool poxReport = false;
-uint32_t lastPoxDetectionReport = 0;
+#define UNIQUE_ID "MONTIN-"
 
 int irPin = 15;
 int irThreshold = 100;
@@ -31,18 +24,6 @@ bool menetes = false;
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-String uniqueId = "";
-
-void onBeatDetected()
-{
-  if (poxReport && millis() - lastPoxDetectionReport > POX_DETECTING_PERIOD_MS && client.connected())
-  {
-    float heartRate = pox.getHeartRate();
-    float sp02 = pox.getSpO2();
-    client.publish(getUniqueTopic(uniqueId), ("pox_detect "+String(heartRate)+" "+String(sp02)).c_str());
-    lastPoxDetectionReport = millis();
-  }
-}
 
 void setupWifi()
 {
@@ -65,30 +46,6 @@ void setupWifi()
 void setupSensor()
 {
   pinMode(irPin, INPUT);
-
-
-  // MAX30100 Sensor Initializing
-  // Serial.print("Initializing pulse oximeter..");
-  // while(!pox.begin());
-  // Serial.println("SUCCESS");
-  // pox.setOnBeatDetectedCallback(onBeatDetected);
-}
-
-void mqttCallback(char* topic, byte* payload, unsigned int length)
-{
-  if (strcmp(topic, getUniqueTopic(uniqueId)) == 0){
-    String message = getMessage(payload, length);
-    Serial.println("Get message: "+message);
-    if (message == "pox_start"){
-      Serial.println("POX Sensor Start!");
-      poxReport = true;
-    }else if (message == "pox_stop"){
-      Serial.println("POX Sensor Stop!");
-      poxReport = false;
-    }else if (message == "rejoin"){
-      client.disconnect();
-    }
-  }
 }
 
 void mqttConnect()
@@ -96,10 +53,8 @@ void mqttConnect()
   while (!client.connected())
   {
     Serial.print("Attempting MQTT connection...");
-    uniqueId = UNIQUE_ID_PREFIX;
-    uniqueId += String(random(8999)+1000).c_str();
 
-    if (client.connect(uniqueId.c_str()))
+    if (client.connect(UNIQUE_ID.c_str()))
     {
       Serial.print("connected ");
       Serial.println(getUniqueTopic(uniqueId));
@@ -135,7 +90,6 @@ void loop()
     mqttConnect();
   }
   client.loop();
-  // pox.update();
 
   bool state = analogRead(irPin) <= irThreshold;
   if (state && !menetes) menetes = true;
@@ -162,7 +116,7 @@ void loop()
 }
 
 const char* getUniqueTopic(String uniqueId){
-  return ("montin/"+uniqueId).c_str();
+  return ("montin/"+UNIQUE_ID).c_str();
 }
 
 String getMessage(byte* payload, int length){
