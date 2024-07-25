@@ -254,7 +254,7 @@ function MonitoringPage(props: AppPageProps) {
                 title={`${machine?.infus_volume || "0"} mL`}
                 subtitle="Volume Infus"
                 icon={FaWhiskeyGlass}
-                cardColor="green.400"
+                cardColor={machine?.infus_volume >= 300? "green.400": machine?.infus_volume >= 100? "yellow.400":"red:400"}
             />
             <DashboardCard
                 title={`${
