@@ -137,9 +137,7 @@ function MonitoringPage(props: AppPageProps) {
             const initialPatientIndex = patients.findIndex(
                 (patient) => patient.id === machines[0]?.patient
             );
-            setPatientIndex(
-                initialPatientIndex !== -1 ? initialPatientIndex : 0
-            );
+            setPatientIndex(initialPatientIndex);
         }
         setChartData({
                 labels: Array.from(
@@ -150,7 +148,7 @@ function MonitoringPage(props: AppPageProps) {
                     {
                         label: "TPM",
                         data: Array.from(
-                            { length: machines? machines.length : 0 },
+                            { length: machine? machine.infus_rate.length : 0 },
                             (_, index) => machine ? machine.infus_rate[index] : 0
                                 
                         ), // Data Y
@@ -323,7 +321,7 @@ function MonitoringPage(props: AppPageProps) {
                     flexDirection="column"
                     borderRadius="md"
                     background="white"
-                    h="100%"
+                    h="auto"
                     justifyContent="center"
                     w="100%"
                     py={6}

@@ -6,12 +6,11 @@ from flask_socketio import SocketIO
 from flask_cors import CORS
 from modules.db_models import *
 from mongoengine import NotUniqueError
+from modules.model import model, create_data
 import json
 import paho.mqtt.client as mqtt
-
 from json.decoder import JSONDecodeError
 from bson import ObjectId
-
 
 app = Flask(__name__)
 CORS(app)
@@ -117,13 +116,19 @@ def get_machine(id):
 def edit_machine(id):
     try:
         data = request.json
-        print(data)
         machine = Machine.objects(id=ObjectId(id)).modify(
             upsert=False, new=True, **data)
-
         json_data = json.loads(machine.to_json())
         json_data['id'] = json_data['_id']['$oid']
         del json_data['_id']
+        
+        patient = Patient.objects(id=ObjectId(json_data['patient'])).first()
+        if patient:
+            pred = model.predict(create_data(json.loads(patient.to_json()), json_data)).round()
+            machine.infus_rate_recommendation = pred[0]
+        else:
+            machine.patient = None
+        machine.save()
         return response(message="Berhasil memperbarui mesin!", data=json_data)
     except Exception as e:
         print(e)
@@ -176,11 +181,17 @@ def get_patient(id):
 def edit_patient(id):
     try:
         data = request.json
-        patient: Patient = Patient.objects(id=ObjectId(id)).first()
-        patient.update(**data)
+        patient: Patient = Patient.objects(id=ObjectId(id)).modify(
+            upsert=False, new=True, **data)
         json_data = json.loads(patient.to_json())
         json_data['id'] = json_data['_id']['$oid']
         del json_data['_id']
+        
+        machine: Machine = Machine.objects(patient=json_data['id']).first()
+        if machine:
+            pred = model.predict(create_data(json_data,json.loads(patient.to_json()))).round()
+            machine.infus_rate_recommendation = pred[0]
+            machine.save()
         return response(message="Berhasil mengedit pasien!", data=json_data)
     except Exception as e:
         print(e)

@@ -1,4 +1,4 @@
-age,weight,gender,heart_rate,spO2,infusion_factor,drip_rate_per_min
+age,weight,gender,bpm,spO2,infus_factor,drip_rate_per_min
 69,63,male,87,95,macro,29
 32,77,famale,65,100,micro,14
 89,98,famale,86,101,micro,11
