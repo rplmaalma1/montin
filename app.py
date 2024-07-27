@@ -61,7 +61,11 @@ def mqtt_onmessage(client: mqtt.Client, userdata, message):
                 machine = Machine(unique=id)
                 machine.save()
             if data is not None:
-                machine.update(**data)
+                if len(machine.infus_rate) >= 60:
+                    machine.infus_rate = []
+                machine.infus_rate.append(data.get("ir_output"), 0)
+                machine.infus_volume = data.get("loadcell_output")
+                machine.save()
                 machines = Machine.objects()
                 machines_data = json.loads(machines.to_json())
                 for i, d in enumerate(machines_data):
