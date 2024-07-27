@@ -3,13 +3,19 @@
 #include <HTTPClient.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
+#include "HX711.h"
 
 const char* ssid = "Android_87";
 const char* password = "brainissue";
 
 const char* mqttServer = "192.168.1.11";
 
-#define UNIQUE_ID "MONTIN-"
+#define UNIQUE_ID "AIUEO1" // Ganti
+
+const int LOADCELL_DOUT_PIN = 26;
+const int LOADCELL_SCK_PIN = 27;
+HX711 scale;
+
 
 int irPin = 15;
 int irThreshold = 100;
@@ -46,6 +52,8 @@ void setupWifi()
 void setupSensor()
 {
   pinMode(irPin, INPUT);
+  scale.begin(LOADCELL_DOUT_PIN, LOADCELL_SCK_PIN);
+  scale.set_scale(2350);
 }
 
 void mqttConnect()
@@ -54,12 +62,12 @@ void mqttConnect()
   {
     Serial.print("Attempting MQTT connection...");
 
-    if (client.connect(UNIQUE_ID.c_str()))
+    if (client.connect(UNIQUE_ID))
     {
       Serial.print("connected ");
-      Serial.println(getUniqueTopic(uniqueId));
-      client.publish("montin/global", ("join "+uniqueId).c_str());
-      client.subscribe(getUniqueTopic(uniqueId));
+      Serial.println(getUniqueTopic(UNIQUE_ID));
+      client.publish("montin/global", "join "+UNIQUE_ID);
+      client.subscribe(getUniqueTopic(UNIQUE_ID));
     }
     else
     {
@@ -80,7 +88,6 @@ void setup()
   setupWifi();
 
   client.setServer(mqttServer, 1883);
-  client.setCallback(mqttCallback);
 }
 
 void loop()
@@ -107,16 +114,17 @@ void loop()
   
   if (millis() - sendPrevMillis > sendInterval) {
     doc["ir_output"] = tetes*60;
+    doc["loadcell_output"] = scale.get_units(10);
 
     String sensorOutput;
     serializeJson(doc, sensorOutput);
-    client.publish(getUniqueTopic(uniqueId), sensorOutput.c_str());
+    client.publish(getUniqueTopic(UNIQUE_ID), sensorOutput.c_str());
     sendPrevMillis = millis();
   }
 }
 
 const char* getUniqueTopic(String uniqueId){
-  return ("montin/"+UNIQUE_ID).c_str();
+  return "montin/"+UNIQUE_ID;
 }
 
 String getMessage(byte* payload, int length){
